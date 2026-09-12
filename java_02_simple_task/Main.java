@@ -7,6 +7,30 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
+/**
+ * =========================================================================
+ *  Console application: "Faculty Advisor's (Supervisor's) Log Entry"
+ * =========================================================================
+ *
+ *  Functionality:
+ *   1. Reads entity data from the command line.
+ *   2. Validates every field; if a field is invalid, the user is asked
+ *      to re-enter it until it is correct.
+ *   3. Only when ALL fields of an entry are valid is the entry created
+ *      and passed to the model (the SupervisorLogEntry class) and stored.
+ *   4. Displays all created log entries on request.
+ *
+ *  The whole application is kept in one file for convenience; it is split
+ *  into three logical classes:
+ *      - SupervisorLogEntry  -> the model (entity)
+ *      - InputReader         -> validated console input helpers
+ *      - Main                -> menu / program flow
+ * =========================================================================
+ */
+
+/* ------------------------------------------------------------------- */
+/*  MODEL                                                               */
+/* ------------------------------------------------------------------- */
 class SupervisorLogEntry {
 
     private final String surname;
@@ -50,23 +74,49 @@ class SupervisorLogEntry {
     }
 }
 
+/* ------------------------------------------------------------------- */
+/*  VALIDATED CONSOLE INPUT                                             */
+/* ------------------------------------------------------------------- */
 class InputReader {
 
+    // Validates surname/first name: 2-30 Latin or Cyrillic letters, with an
+    // optional single hyphen followed by another 2-30-letter part (covers
+    // double-barreled names, e.g. "Petrenko-Ivanov"). Digits, spaces and
+    // other symbols are rejected.
     private static final Pattern NAME_PATTERN =
             Pattern.compile("^[A-Za-zА-Яа-яЁёІіЇїЄєҐґ]{2,30}(-[A-Za-zА-Яа-яЁёІіЇїЄєҐґ]{2,30})?$");
 
+    // Validates phone number: 10 to 13 digits, with an optional leading "+"
+    // for the international dialing prefix (e.g. "+380671234567"). No
+    // spaces, dashes or parentheses are allowed inside the number.
     private static final Pattern PHONE_PATTERN =
             Pattern.compile("^\\+?\\d{10,13}$");
 
+    // Validates street name: 2 to 50 characters made up of Latin or Cyrillic
+    // letters, digits, spaces, periods, apostrophes and hyphens. This is
+    // intentionally permissive to allow names like "Ivana Franka St." or
+    // "8-th of March".
     private static final Pattern STREET_PATTERN =
             Pattern.compile("^[A-Za-zА-Яа-яЁёІіЇїЄєҐґ0-9 .'-]{2,50}$");
 
+    // Validates building number: requires a numeric core (buildings are
+    // always numbered), with an optional single letter suffix (e.g. "12A")
+    // and an optional second "/"- or "-"-separated block for corpus/section
+    // numbers (e.g. "5/2", "7-B"). This rejects inputs with no digits at all
+    // (e.g. "-", "//", "abc").
     private static final Pattern BUILDING_PATTERN =
             Pattern.compile("^(?=.{1,10}$)\\d{1,4}[A-Za-zА-Яа-яЁёІіЇїЄєҐґ]?([/-]\\d{1,4}[A-Za-zА-Яа-яЁёІіЇїЄєҐґ]?)?$");
 
+    // Validates apartment number: either a single "-" (meaning the address
+    // has no apartment, e.g. a private house) or a positive integer from
+    // 1 to 9999 with no leading zero.
     private static final Pattern APARTMENT_PATTERN =
             Pattern.compile("^(-|[1-9][0-9]{0,3})$");
 
+    // "uuuu" (plain calendar year) is used instead of "yyyy" (year-of-era).
+    // With ResolverStyle.STRICT, "yyyy" has no era attached during parsing, which
+    // makes java.time unable to resolve a LocalDate and throws a
+    // DateTimeParseException for every input. "uuuu" avoids the era ambiguity.
     private static final DateTimeFormatter DATE_FORMAT =
             DateTimeFormatter.ofPattern("dd.MM.uuuu").withResolverStyle(ResolverStyle.STRICT);
 
@@ -152,6 +202,9 @@ class InputReader {
     }
 }
 
+/* ------------------------------------------------------------------- */
+/*  PROGRAM FLOW                                                        */
+/* ------------------------------------------------------------------- */
 public class Main {
 
     private static final List<SupervisorLogEntry> LOG_ENTRIES = new ArrayList<>();
