@@ -76,6 +76,9 @@ public class Main {
         System.out.print("Your choice: ");
     }
 
+    // ---------------------------------------------------------------
+    // 1. Issue a pass
+    // ---------------------------------------------------------------
     private static void issuePass(Scanner scanner, CardRegistry registry) {
         System.out.println("\nAvailable pass types:");
         PassType[] types = PassType.values();
@@ -84,14 +87,24 @@ public class Main {
         }
 
         PassType chosen = readMenuChoice(scanner, "Select pass type number: ", types);
-        LocalDate startDate = readDate(scanner, "Enter start date (dd.MM.yyyy): ");
 
-        SkiPassCard card = registry.issuePass(chosen, startDate);
-        System.out.println("Pass issued: " + card + "\n");
+        while (true) {
+            LocalDate startDate = readDate(scanner, "Enter start date (dd.MM.yyyy): ");
+            try {
+                SkiPassCard card = registry.issuePass(chosen, startDate);
+                System.out.println("Pass issued: " + card + "\n");
+                return;
+            } catch (IllegalArgumentException e) {
+                System.out.println("  Error: " + e.getMessage() + "\n");
+            }
+        }
     }
 
+    // ---------------------------------------------------------------
+    // 2. Block a pass
+    // ---------------------------------------------------------------
     private static void blockPass(Scanner scanner, CardRegistry registry) {
-        System.out.print("\nEnter card id to block: ");
+        System.out.print("\nEnter card id to block (full id or just the number, e.g. 7): ");
         String id = scanner.nextLine().trim();
         boolean ok = registry.blockPass(id);
         if (ok) {
@@ -101,24 +114,29 @@ public class Main {
         }
     }
 
+    // ---------------------------------------------------------------
+    // 3. Simulate an entry attempt
+    // ---------------------------------------------------------------
     private static void simulateEntry(Scanner scanner, Turnstile turnstile) {
-        System.out.print("\nEnter card id presented at the turnstile: ");
+        System.out.print("\nEnter card id presented at the turnstile (full id or just the number, e.g. 7): ");
         String id = scanner.nextLine().trim();
 
         System.out.print("Simulate a card read failure for this attempt? (y/N): ");
         boolean forceUnreadable = scanner.nextLine().trim().equalsIgnoreCase("y");
 
-        System.out.print("Enter date/time of the attempt (dd.MM.yyyy HH:mm), or leave blank for now: ");
-        String dtInput = scanner.nextLine().trim();
-        LocalDateTime moment;
-        if (dtInput.isEmpty()) {
-            moment = LocalDateTime.now();
-        } else {
-            moment = parseDateTimeLoop(scanner, dtInput);
-        }
+        while (true) {
+            System.out.print("Enter date/time of the attempt (dd.MM.yyyy HH:mm), or leave blank for now: ");
+            String dtInput = scanner.nextLine().trim();
+            LocalDateTime moment = dtInput.isEmpty() ? LocalDateTime.now() : parseDateTimeLoop(scanner, dtInput);
 
-        AccessResult result = turnstile.attemptEntry(id, moment, forceUnreadable);
-        System.out.println("Result: " + result + " - " + result.getDescription() + "\n");
+            try {
+                AccessResult result = turnstile.attemptEntry(id, moment, forceUnreadable);
+                System.out.println("Result: " + result + " - " + result.getDescription() + "\n");
+                return;
+            } catch (IllegalArgumentException e) {
+                System.out.println("  Error: " + e.getMessage() + "\n");
+            }
+        }
     }
 
     private static LocalDateTime parseDateTimeLoop(Scanner scanner, String firstAttempt) {
@@ -133,6 +151,9 @@ public class Main {
         }
     }
 
+    // ---------------------------------------------------------------
+    // 6. List cards
+    // ---------------------------------------------------------------
     private static void listCards(CardRegistry registry) {
         System.out.println("\n=== Issued cards (" + registry.getAllCards().size() + ") ===");
         if (registry.getAllCards().isEmpty()) {
@@ -145,6 +166,9 @@ public class Main {
         System.out.println();
     }
 
+    // ---------------------------------------------------------------
+    // Small validated-input helpers
+    // ---------------------------------------------------------------
     private static PassType readMenuChoice(Scanner scanner, String prompt, PassType[] options) {
         while (true) {
             System.out.print(prompt);

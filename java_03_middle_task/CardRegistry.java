@@ -27,8 +27,22 @@ public class CardRegistry {
      * type's rules: a fixed number of days for time-unlimited weekday/
      * weekend passes, or "until the end of the season" for ride-count and
      * seasonal passes.
+     *
+     * @throws IllegalArgumentException if startDate is in the past, is
+     *         after the end of the season, or (for fixed-length passes)
+     *         would make the pass run past the end of the season
      */
     public SkiPassCard issuePass(PassType type, LocalDate startDate) {
+        LocalDate today = LocalDate.now();
+        if (startDate.isBefore(today)) {
+            throw new IllegalArgumentException(
+                    "Start date cannot be in the past (today is " + today + ").");
+        }
+        if (startDate.isAfter(seasonEndDate)) {
+            throw new IllegalArgumentException(
+                    "Start date is after the end of the season (" + seasonEndDate + ").");
+        }
+
         LocalDate validFrom = startDate;
         LocalDate validTo;
 
@@ -36,6 +50,12 @@ public class CardRegistry {
             validTo = seasonEndDate;
         } else {
             validTo = startDate.plusDays(type.getValidDays() - 1L);
+            if (validTo.isAfter(seasonEndDate)) {
+                throw new IllegalArgumentException(
+                        "A " + type.getDisplayName() + " pass starting " + startDate +
+                                " would run until " + validTo + ", past the end of the season (" +
+                                seasonEndDate + "). Choose an earlier start date.");
+            }
         }
 
         String id = "SKI-" + String.format("%06d", sequence.getAndIncrement());
@@ -44,9 +64,36 @@ public class CardRegistry {
         return card;
     }
 
-    /** Blocks the card with the given id. Returns false if no such card is registered. */
+    public LocalDate getSeasonEndDate() {
+        return seasonEndDate;
+    }
+
+    /**
+     * Normalizes a user-supplied card identifier so that the full form
+     * ("SKI-000007"), a bare number ("7"), and a zero-padded number
+     * ("000007") all resolve to the same card, and so lookups are not
+     * case-sensitive.
+     */
+    public static String normalizeId(String rawId) {
+        if (rawId == null) {
+            return null;
+        }
+        String trimmed = rawId.trim();
+        if (trimmed.matches("\\d+")) {
+            try {
+                long n = Long.parseLong(trimmed);
+                return "SKI-" + String.format("%06d", n);
+            } catch (NumberFormatException e) {
+                // Too large to be a real sequence value; fall through and
+                // treat it as a literal (non-matching) id below.
+            }
+        }
+        return trimmed.toUpperCase();
+    }
+
+    /** Blocks the card with the given id (full id or bare number). Returns false if no such card is registered. */
     public boolean blockPass(String id) {
-        SkiPassCard card = cardsById.get(id);
+        SkiPassCard card = cardsById.get(normalizeId(id));
         if (card == null) {
             return false;
         }
@@ -55,7 +102,7 @@ public class CardRegistry {
     }
 
     public Optional<SkiPassCard> findCard(String id) {
-        return Optional.ofNullable(cardsById.get(id));
+        return Optional.ofNullable(cardsById.get(normalizeId(id)));
     }
 
     public Map<String, SkiPassCard> getAllCards() {
