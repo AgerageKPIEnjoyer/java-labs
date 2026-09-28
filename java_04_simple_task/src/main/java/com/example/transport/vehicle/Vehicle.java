@@ -1,5 +1,7 @@
 package com.example.transport.vehicle;
 
+import com.example.transport.exception.NoAvailableSeatException;
+import com.example.transport.exception.PassengerNotOnBoardException;
 import com.example.transport.person.Person;
 
 import java.util.ArrayList;
@@ -44,6 +46,31 @@ public abstract class Vehicle<T extends Person> {
     /** Read-only view of who is currently on board. */
     public List<T> getPassengers() {
         return Collections.unmodifiableList(passengers);
+    }
+
+    /**
+     * Boards a passenger onto this vehicle.
+     *
+     * @throws NoAvailableSeatException if every seat is already occupied
+     */
+    public void board(T passenger) {
+        if (getOccupiedSeats() >= maxSeats) {
+            throw new NoAvailableSeatException(
+                    registrationId + " has no available seats (capacity " + maxSeats + ").");
+        }
+        passengers.add(passenger);
+    }
+
+    /**
+     * Removes a passenger from this vehicle.
+     *
+     * @throws PassengerNotOnBoardException if the passenger is not currently on board
+     */
+    public void disembark(T passenger) {
+        if (!passengers.remove(passenger)) {
+            throw new PassengerNotOnBoardException(
+                    passenger + " is not on board " + registrationId + ".");
+        }
     }
 
     @Override
