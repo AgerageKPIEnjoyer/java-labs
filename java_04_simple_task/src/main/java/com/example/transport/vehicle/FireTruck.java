@@ -1,4 +1,12 @@
 package com.example.transport.vehicle;
 
-public class FireTruck {
+import com.example.transport.person.FireFighter;
+
+/**
+ * A kind of Car. Can only carry FireFighter passengers.
+ */
+public class FireTruck extends Car<FireFighter> {
+    public FireTruck(String registrationId, int maxSeats) {
+        super(registrationId, maxSeats);
+    }
 }
